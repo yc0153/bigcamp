@@ -43,17 +43,24 @@
       input:focus, textarea:focus { outline: 3px solid rgba(212, 81, 47, 0.18); border-color: var(--accent); }
       button { border: 0; border-radius: 12px; padding: 12px 16px; color: #fff; background: var(--accent); font: inherit; font-weight: 800; cursor: pointer; }
       button:hover { background: var(--accent-dark); }
+      button:disabled { cursor: not-allowed; opacity: 0.45; }
       form button { width: 100%; margin-top: 20px; }
 
-      .list-header { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 18px; }
+      .list-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 18px; }
       .list-header h2 { margin: 0; }
       .count { color: var(--muted); font-size: 0.88rem; }
+      .list-actions { display: flex; align-items: center; gap: 10px; }
+      .list-actions button { padding: 9px 11px; font-size: 0.82rem; }
       .idea-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
       .idea-card { padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
       .idea-card h3 { margin: 0 0 10px; font-size: 1.05rem; }
       .idea-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.55; }
       .idea-card strong { color: var(--ink); }
       .empty { padding: 32px 16px; border: 1px dashed #d7c5b4; border-radius: 16px; color: var(--muted); text-align: center; }
+      .spotlight { margin: 0 0 16px; padding: 18px; border-radius: 16px; color: #fff; background: var(--ink); }
+      .spotlight-label { margin: 0 0 8px; color: #ffc2a7; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; }
+      .spotlight h3 { margin: 0 0 8px; font-size: 1.35rem; }
+      .spotlight p:last-child { margin: 0; color: #f6ded0; line-height: 1.55; }
       .footnote { margin: 22px 0 0; color: var(--muted); font-size: 0.84rem; }
 
       @media (max-width: 760px) {
@@ -89,8 +96,16 @@
         <article class="panel">
           <div class="list-header">
             <h2>우리 팀 아이디어</h2>
-            <span class="count" id="ideaCount">0개</span>
+            <div class="list-actions">
+              <span class="count" id="ideaCount">0개</span>
+              <button id="pickButton" type="button">오늘의 피치 뽑기</button>
+            </div>
           </div>
+          <section class="spotlight" id="spotlight" hidden aria-live="polite">
+            <p class="spotlight-label">TODAY'S PITCH</p>
+            <h3 id="spotlightTitle"></h3>
+            <p id="spotlightWow"></p>
+          </section>
           <ul class="idea-list" id="ideaList" aria-live="polite"></ul>
         </article>
       </section>
@@ -101,13 +116,22 @@
       const form = document.querySelector("#ideaForm");
       const ideaList = document.querySelector("#ideaList");
       const ideaCount = document.querySelector("#ideaCount");
+      const pickButton = document.querySelector("#pickButton");
+      const spotlight = document.querySelector("#spotlight");
+      const spotlightTitle = document.querySelector("#spotlightTitle");
+      const spotlightWow = document.querySelector("#spotlightWow");
+      const demoIdeas = [
+        { id: "demo-1", title: "캠프 식단 추천기", problem: "팀원마다 점심 메뉴를 고르는 시간이 오래 걸린다.", wow: "예산과 알레르기를 입력하면 오늘의 메뉴를 바로 뽑아 준다." },
+        { id: "demo-2", title: "발표 리허설 타이머", problem: "90초 발표에서 설명이 길어지는지 알기 어렵다.", wow: "발표를 녹음하면 시간 구간별 핵심 문장을 보여 준다." }
+      ];
       let ideas = loadIdeas();
 
       function loadIdeas() {
         try {
-          return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          return saved && saved.length ? saved : [...demoIdeas];
         } catch {
-          return [];
+          return [...demoIdeas];
         }
       }
 
@@ -123,6 +147,7 @@
 
       function renderIdeas() {
         ideaCount.textContent = `${ideas.length}개`;
+        pickButton.disabled = ideas.length === 0;
         if (!ideas.length) {
           ideaList.innerHTML = '<li class="empty">아직 카드가 없습니다. 첫 아이디어를 등록해 보세요.</li>';
           return;
@@ -135,6 +160,14 @@
             <p><strong>Wow</strong> ${escapeHtml(idea.wow)}</p>
           </li>
         `).join("");
+      }
+
+      function pickIdea() {
+        if (!ideas.length) return;
+        const idea = ideas[Math.floor(Math.random() * ideas.length)];
+        spotlightTitle.textContent = idea.title;
+        spotlightWow.textContent = `Wow 포인트: ${idea.wow}`;
+        spotlight.hidden = false;
       }
 
       form.addEventListener("submit", (event) => {
@@ -151,6 +184,8 @@
         form.reset();
         document.querySelector("#title").focus();
       });
+
+      pickButton.addEventListener("click", pickIdea);
 
       renderIdeas();
     </script>
