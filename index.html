@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>캠프 아이디어 보드</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #24211e;
+        --muted: #766e66;
+        --paper: #fffaf3;
+        --card: #ffffff;
+        --accent: #d4512f;
+        --accent-dark: #9f351d;
+        --line: #eadfd2;
+        --shadow: 0 18px 45px rgba(108, 65, 35, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background: linear-gradient(135deg, #fff6ea 0%, #f4e7d8 100%);
+        font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+      }
+
+      main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 56px 0 72px; }
+
+      .eyebrow { margin: 0 0 10px; color: var(--accent-dark); font-size: 0.82rem; font-weight: 800; letter-spacing: 0.12em; }
+      h1 { margin: 0; font-size: clamp(2.2rem, 5vw, 4.6rem); line-height: 1; letter-spacing: -0.06em; }
+      .intro { max-width: 640px; margin: 22px 0 36px; color: var(--muted); font-size: 1.05rem; line-height: 1.7; }
+
+      .layout { display: grid; grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr); gap: 22px; align-items: start; }
+      .panel { padding: 26px; border: 1px solid rgba(234, 223, 210, 0.85); border-radius: 24px; background: rgba(255, 250, 243, 0.82); box-shadow: var(--shadow); }
+      .panel h2 { margin: 0 0 20px; font-size: 1.15rem; }
+
+      label { display: block; margin: 16px 0 8px; font-size: 0.88rem; font-weight: 800; }
+      input, textarea { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px; color: var(--ink); background: var(--card); font: inherit; }
+      textarea { min-height: 96px; resize: vertical; }
+      input:focus, textarea:focus { outline: 3px solid rgba(212, 81, 47, 0.18); border-color: var(--accent); }
+      button { border: 0; border-radius: 12px; padding: 12px 16px; color: #fff; background: var(--accent); font: inherit; font-weight: 800; cursor: pointer; }
+      button:hover { background: var(--accent-dark); }
+      form button { width: 100%; margin-top: 20px; }
+
+      .list-header { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 18px; }
+      .list-header h2 { margin: 0; }
+      .count { color: var(--muted); font-size: 0.88rem; }
+      .idea-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+      .idea-card { padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+      .idea-card h3 { margin: 0 0 10px; font-size: 1.05rem; }
+      .idea-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.55; }
+      .idea-card strong { color: var(--ink); }
+      .empty { padding: 32px 16px; border: 1px dashed #d7c5b4; border-radius: 16px; color: var(--muted); text-align: center; }
+      .footnote { margin: 22px 0 0; color: var(--muted); font-size: 0.84rem; }
+
+      @media (max-width: 760px) {
+        main { padding-top: 36px; }
+        .layout { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">AI SUMMER CAMP · DAY 1 MVP</p>
+      <h1>캠프 아이디어 보드</h1>
+      <p class="intro">팀이 고민 중인 프로젝트 주제를 카드로 모아 보세요. 오늘은 아이디어를 등록하고, 새로고침해도 남아 있는지 확인하는 데 집중합니다.</p>
+
+      <section class="layout" aria-label="아이디어 보드">
+        <article class="panel">
+          <h2>아이디어 등록</h2>
+          <form id="ideaForm">
+            <label for="title">프로젝트 이름</label>
+            <input id="title" name="title" required placeholder="예: 캠프 식단 추천기" />
+
+            <label for="problem">해결할 문제</label>
+            <textarea id="problem" name="problem" required placeholder="누가 어떤 상황에서 불편한가요?"></textarea>
+
+            <label for="wow">Wow 포인트</label>
+            <textarea id="wow" name="wow" required placeholder="90초 데모에서 무엇을 보여줄 건가요?"></textarea>
+
+            <button type="submit">아이디어 카드 추가</button>
+          </form>
+          <p class="footnote">Day 1에서는 서버 없이 브라우저의 localStorage만 사용합니다.</p>
+        </article>
+
+        <article class="panel">
+          <div class="list-header">
+            <h2>우리 팀 아이디어</h2>
+            <span class="count" id="ideaCount">0개</span>
+          </div>
+          <ul class="idea-list" id="ideaList" aria-live="polite"></ul>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const STORAGE_KEY = "camp-ai-ideas";
+      const form = document.querySelector("#ideaForm");
+      const ideaList = document.querySelector("#ideaList");
+      const ideaCount = document.querySelector("#ideaCount");
+      let ideas = loadIdeas();
+
+      function loadIdeas() {
+        try {
+          return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        } catch {
+          return [];
+        }
+      }
+
+      function saveIdeas() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(ideas));
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>'"]/g, (character) => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+        }[character]));
+      }
+
+      function renderIdeas() {
+        ideaCount.textContent = `${ideas.length}개`;
+        if (!ideas.length) {
+          ideaList.innerHTML = '<li class="empty">아직 카드가 없습니다. 첫 아이디어를 등록해 보세요.</li>';
+          return;
+        }
+
+        ideaList.innerHTML = ideas.map((idea) => `
+          <li class="idea-card">
+            <h3>${escapeHtml(idea.title)}</h3>
+            <p><strong>문제</strong> ${escapeHtml(idea.problem)}</p>
+            <p><strong>Wow</strong> ${escapeHtml(idea.wow)}</p>
+          </li>
+        `).join("");
+      }
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const data = new FormData(form);
+        ideas.unshift({
+          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+          title: data.get("title").trim(),
+          problem: data.get("problem").trim(),
+          wow: data.get("wow").trim()
+        });
+        saveIdeas();
+        renderIdeas();
+        form.reset();
+        document.querySelector("#title").focus();
+      });
+
+      renderIdeas();
+    </script>
+  </body>
+</html>
