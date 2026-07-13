@@ -6,6 +6,7 @@
 - `speckit_inputs.md`: PRD를 Spec Kit/Codex 입력으로 연결하는 초안
 - `AGENTS.md`: 팀 개발 규칙과 검증 방법
 - `index.html`: 아이디어 카드 등록, Supabase 공유 저장(실패 시 `localStorage` fallback), 오늘의 피치 뽑기 MVP
+- [`deployment_guide.md`](deployment_guide.md): GitHub Pages·Supabase·Vercel 준비물, 설정 순서, Codex 복사 프롬프트
 
 ## 로컬 실행
 
