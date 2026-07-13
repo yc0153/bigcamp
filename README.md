@@ -1,5 +1,12 @@
 # 캠프 아이디어 보드 - Day 1 리허설
 
+## 산출물
+
+- `team_prd.md`: 문제·타깃·핵심 기능·성공 기준·Wow 포인트
+- `speckit_inputs.md`: PRD를 Spec Kit/Codex 입력으로 연결하는 초안
+- `AGENTS.md`: 팀 개발 규칙과 검증 방법
+- `index.html`: 아이디어 카드 등록, `localStorage` 저장, 오늘의 피치 뽑기 MVP
+
 ## 로컬 실행
 
 ```powershell
