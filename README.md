@@ -5,7 +5,7 @@
 - `team_prd.md`: 문제·타깃·핵심 기능·성공 기준·Wow 포인트
 - `speckit_inputs.md`: PRD를 Spec Kit/Codex 입력으로 연결하는 초안
 - `AGENTS.md`: 팀 개발 규칙과 검증 방법
-- `index.html`: 아이디어 카드 등록, `localStorage` 저장, 오늘의 피치 뽑기 MVP
+- `index.html`: 아이디어 카드 등록, Supabase 공유 저장(실패 시 `localStorage` fallback), 오늘의 피치 뽑기 MVP
 
 ## 로컬 실행
 
@@ -15,9 +15,18 @@ python -m http.server 4173
 
 브라우저에서 `http://localhost:4173`을 열고 다음을 확인한다.
 
-1. 아이디어 카드 등록
-2. 새로고침 후 카드 유지
-3. `오늘의 피치 뽑기` 버튼 동작
+1. Supabase 연결 상태가 표시되는지 확인
+2. 아이디어 카드 등록
+3. 새로고침 후 카드 유지
+4. `오늘의 피치 뽑기` 버튼 동작
+
+## Supabase 연결
+
+- 프로젝트: `yc0153's Project`
+- 테이블: `public.ideas`
+- 인증: 익명 로그인
+- 저장 방식: Supabase에 공유 저장하고, 연결에 실패하면 해당 브라우저의 `localStorage`에 임시 저장한다.
+- 보안: `ideas` 테이블에 RLS를 켜고 익명 사용자의 조회·등록 정책만 허용한다. Supabase secret/service_role key는 사용하지 않는다.
 
 ## Day 1 배포 체크리스트
 

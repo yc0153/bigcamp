@@ -90,7 +90,7 @@
 
             <button type="submit">아이디어 카드 추가</button>
           </form>
-          <p class="footnote">Day 1에서는 서버 없이 브라우저의 localStorage만 사용합니다.</p>
+          <p class="footnote" id="syncStatus">Supabase 연결 중...</p>
         </article>
 
         <article class="panel">
@@ -111,12 +111,18 @@
       </section>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+      const SUPABASE_URL = "https://fcyrxbdbalbsqsfbohfm.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_XJlujKLkiyzrzNidAWnnoQ_oY2gSxoP";
       const STORAGE_KEY = "camp-ai-ideas";
+      const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
       const form = document.querySelector("#ideaForm");
+      const submitButton = form.querySelector('button[type="submit"]');
       const ideaList = document.querySelector("#ideaList");
       const ideaCount = document.querySelector("#ideaCount");
       const pickButton = document.querySelector("#pickButton");
+      const syncStatus = document.querySelector("#syncStatus");
       const spotlight = document.querySelector("#spotlight");
       const spotlightTitle = document.querySelector("#spotlightTitle");
       const spotlightWow = document.querySelector("#spotlightWow");
@@ -124,18 +130,25 @@
         { id: "demo-1", title: "캠프 식단 추천기", problem: "팀원마다 점심 메뉴를 고르는 시간이 오래 걸린다.", wow: "예산과 알레르기를 입력하면 오늘의 메뉴를 바로 뽑아 준다." },
         { id: "demo-2", title: "발표 리허설 타이머", problem: "90초 발표에서 설명이 길어지는지 알기 어렵다.", wow: "발표를 녹음하면 시간 구간별 핵심 문장을 보여 준다." }
       ];
-      let ideas = loadIdeas();
+      let ideas = loadLocalIdeas();
+      let isReady = false;
+      let cloudAvailable = false;
 
-      function loadIdeas() {
+      function readStoredIdeas() {
         try {
           const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-          return saved && saved.length ? saved : [...demoIdeas];
+          return Array.isArray(saved) ? saved : [];
         } catch {
-          return [...demoIdeas];
+          return [];
         }
       }
 
-      function saveIdeas() {
+      function loadLocalIdeas() {
+        const saved = readStoredIdeas();
+        return saved.length ? saved : [...demoIdeas];
+      }
+
+      function saveLocalIdeas() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(ideas));
       }
 
@@ -147,7 +160,7 @@
 
       function renderIdeas() {
         ideaCount.textContent = `${ideas.length}개`;
-        pickButton.disabled = ideas.length === 0;
+        pickButton.disabled = !isReady || ideas.length === 0;
         if (!ideas.length) {
           ideaList.innerHTML = '<li class="empty">아직 카드가 없습니다. 첫 아이디어를 등록해 보세요.</li>';
           return;
@@ -170,24 +183,92 @@
         spotlight.hidden = false;
       }
 
-      form.addEventListener("submit", (event) => {
+      form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (!isReady) return;
+
         const data = new FormData(form);
-        ideas.unshift({
-          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        const newIdea = {
           title: data.get("title").trim(),
           problem: data.get("problem").trim(),
           wow: data.get("wow").trim()
-        });
-        saveIdeas();
+        };
+
+        submitButton.disabled = true;
+        if (cloudAvailable) {
+          const { data: savedIdea, error } = await supabaseClient
+            .from("ideas")
+            .insert(newIdea)
+            .select("id,title,problem,wow,created_at")
+            .single();
+
+          if (!error) {
+            ideas.unshift(savedIdea);
+          } else {
+            cloudAvailable = false;
+            syncStatus.textContent = "Supabase 저장 실패 · 이 브라우저에 임시 저장합니다.";
+            ideas.unshift({
+              id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+              ...newIdea
+            });
+            saveLocalIdeas();
+          }
+        } else {
+          ideas.unshift({
+            id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+            ...newIdea
+          });
+          saveLocalIdeas();
+        }
+
         renderIdeas();
         form.reset();
+        submitButton.disabled = false;
         document.querySelector("#title").focus();
       });
 
       pickButton.addEventListener("click", pickIdea);
 
       renderIdeas();
+
+      async function init() {
+        try {
+          const { error: authError } = await supabaseClient.auth.signInAnonymously();
+          if (authError) throw authError;
+
+          const { data, error } = await supabaseClient
+            .from("ideas")
+            .select("id,title,problem,wow,created_at")
+            .order("created_at", { ascending: false });
+          if (error) throw error;
+
+          ideas = data || [];
+          if (!ideas.length) {
+            const localIdeasToMigrate = readStoredIdeas()
+              .filter((idea) => !String(idea.id).startsWith("demo-"))
+              .map(({ title, problem, wow }) => ({ title, problem, wow }));
+
+            if (localIdeasToMigrate.length) {
+              const { data: migratedIdeas, error: migrationError } = await supabaseClient
+                .from("ideas")
+                .insert(localIdeasToMigrate)
+                .select("id,title,problem,wow,created_at");
+              if (!migrationError) ideas = migratedIdeas || [];
+            }
+          }
+          cloudAvailable = true;
+          syncStatus.textContent = "Supabase에 저장 중 · 모든 기기에서 공유됩니다.";
+        } catch (error) {
+          console.error("Supabase 연결 실패:", error);
+          syncStatus.textContent = "Supabase 연결 실패 · 이 브라우저에 임시 저장합니다.";
+        } finally {
+          isReady = true;
+          submitButton.disabled = false;
+          renderIdeas();
+        }
+      }
+
+      init();
     </script>
   </body>
 </html>

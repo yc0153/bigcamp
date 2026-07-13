@@ -6,7 +6,8 @@
 - 첫 배포는 의존성 없는 정적 HTML로 끝낸다.
 - 핵심 기능은 2개만 먼저 완성한다. 범위가 늘어나면 백로그로 옮긴다.
 - `index.html`은 반드시 소문자 파일명으로 유지한다.
-- API 키, 토큰, 비밀번호를 프론트엔드 코드나 Git 커밋에 넣지 않는다.
+- 비밀 키·토큰·비밀번호를 프론트엔드 코드나 Git 커밋에 넣지 않는다.
+- Supabase publishable key는 RLS와 정책을 함께 켠 경우에만 브라우저에 사용한다. service_role·secret key는 절대 공개하지 않는다.
 - Day 2 서버 함수에서만 `process.env.OPENAI_API_KEY`를 읽는다.
 
 ## 협업 규칙
